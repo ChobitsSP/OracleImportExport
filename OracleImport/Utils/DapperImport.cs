@@ -228,6 +228,7 @@ order by t1.TABLE_NAME, column_id
             catch (Exception ex)
             {
                 LogService.Error(ex);
+                LogService.Warn($"Table {tableName} Import Failed: " + ex.Message);
             }
             finally
             {
