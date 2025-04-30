@@ -8,10 +8,10 @@ namespace OracleImport.Utils
 {
     public static class DapperImport
     {
-        public static async Task<string> GetInsertSql(OracleConnection conn, string table_name)
+        public static string GetInsertSql(List<TableColumn> columns, string table_name)
         {
-            var columns = await GetColumns(conn, table_name);
-            var columnNames = string.Join(",", columns.Select(t => $@"""{t.name}"""));
+            // var columnNames = string.Join(",", columns.Select(t => $@"""{t.name}"""));
+            var columnNames = string.Join(",", columns.Select(t => t.name));
             var parameterNames = string.Join(",", columns.Select(t => ":" + t.name));
             return $"INSERT INTO {table_name} ({columnNames}) VALUES ({parameterNames})";
         }
@@ -22,6 +22,9 @@ namespace OracleImport.Utils
             public string name { get; set; }
             public string type { get; set; }
             public bool null_able { get; set; }
+            public long? data_length { get; set; }
+            public int? numeric_precision { get; set; }
+            public int? numeric_scale { get; set; }
         }
 
         public class TableColumnsItem
@@ -30,6 +33,9 @@ namespace OracleImport.Utils
             public string COLUMN_NAME { get; set; }
             public string DATA_TYPE { get; set; }
             public string NULLABLE { get; set; }
+            public long? DATA_LENGTH { get; set; }
+            public int? DATA_PRECISION { get; set; }
+            public int? DATA_SCALE { get; set; }
         }
 
         static async Task<List<TableColumn>> GetColumns(OracleConnection conn, string table_name)
@@ -39,6 +45,9 @@ select
   t2.COLUMN_ID,
   t1.COLUMN_NAME,
   t2.DATA_TYPE,
+  t2.DATA_LENGTH,
+  t2.DATA_PRECISION,
+  t2.DATA_SCALE,
   t2.NULLABLE
 from
   user_col_comments t1
@@ -57,6 +66,9 @@ order by t1.TABLE_NAME, column_id
                 name = t.COLUMN_NAME,
                 null_able = t.NULLABLE == "Y",
                 type = t.DATA_TYPE,
+                data_length = t.DATA_LENGTH,
+                numeric_precision = t.DATA_PRECISION,
+                numeric_scale = t.DATA_SCALE,
             }).ToList();
 
             return result;
@@ -82,7 +94,7 @@ order by t1.TABLE_NAME, column_id
             }
         }
 
-        public static IEnumerable<Dictionary<string, object>> ReadCsv(string filePath)
+        public static IEnumerable<Dictionary<string, string>> ReadCsv(string filePath)
         {
             using var reader = new StreamReader(filePath, encoding: Encoding.GetEncoding("GBK"));
             using var csvReader = new CsvReader(reader, CultureInfo.InvariantCulture);
@@ -93,13 +105,83 @@ order by t1.TABLE_NAME, column_id
 
             while (csvReader.Read())
             {
-                var record = new Dictionary<string, object>();
+                var record = new Dictionary<string, string>();
                 foreach (var header in headers)
                 {
+                    var vala = csvReader[header];
                     record[header] = csvReader[header];
                 }
                 yield return record;
             }
+        }
+
+        static object GetInsertObj(Dictionary<string, string> row, List<TableColumn> columns)
+        {
+            var item = new Dictionary<string, object>();
+
+            foreach (var key in row.Keys)
+            {
+                var column = columns.FirstOrDefault(t => string.Equals(t.name, key, StringComparison.OrdinalIgnoreCase));
+                if (column == null) throw new Exception("column not found: " + key);
+                var value = GetValueObj(row[key], column);
+                item[key] = value;
+            }
+
+            return item;
+        }
+
+        static object GetValueObj(string value, TableColumn column)
+        {
+            string[] strlist = [
+                "VARCHAR2",
+                "NVARCHAR2",
+                "CLOB",
+                "NCHAR",
+                "XMLTYPE",
+            ];
+
+            // 字符串类型
+            if (strlist.Contains(column.type))
+            {
+                if (string.IsNullOrEmpty(value) && column.null_able)
+                {
+                    return (string)null;
+                }
+                return value;
+            }
+
+            if (column.type == "FLOAT")
+            {
+                if (string.IsNullOrEmpty(value) && column.null_able)
+                {
+                    return (decimal?)null;
+                }
+                return decimal.Parse(value);
+            }
+
+            if (column.type == "DATE")
+            {
+                if (string.IsNullOrEmpty(value) && column.null_able)
+                {
+                    return (DateTime?)null;
+                }
+                return DateTime.Parse(value);
+            }
+
+            if (column.type == "NUMBER")
+            {
+                if (string.IsNullOrEmpty(value) && column.null_able)
+                {
+                    return (int?)null;
+                }
+                if ((column.numeric_scale ?? 0) == 0)
+                {
+                    return long.Parse(value);
+                }
+                return decimal.Parse(value);
+            }
+
+            return null;
         }
 
         public static async Task Import(string filePath, string tableName, int batchSize)
@@ -107,7 +189,9 @@ order by t1.TABLE_NAME, column_id
             var constr = ConfigUtils.GetConnectionString();
             using var conn = new OracleConnection(constr);
 
-            var sql = await GetInsertSql(conn, tableName);
+            var columns = await GetColumns(conn, tableName);
+
+            var sql = GetInsertSql(columns, tableName);
 
             var allList = ReadCsv(filePath);
             var glist = GroupList(allList, batchSize);
@@ -118,7 +202,8 @@ order by t1.TABLE_NAME, column_id
 
                 try
                 {
-                    await conn.ExecuteAsync(sql, group, trans);
+                    var addList = group.Select(t => GetInsertObj(t, columns)).ToArray();
+                    await conn.ExecuteAsync(sql, addList, trans);
                     await trans.CommitAsync();
                 }
                 catch (Exception ex)
