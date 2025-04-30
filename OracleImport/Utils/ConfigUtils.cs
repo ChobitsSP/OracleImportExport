@@ -38,9 +38,6 @@ namespace OracleImport
 
         public static string GetSectionValue(this IConfiguration config, string name, string defVal = null)
         {
-            var envName = Regex.Replace(name, @"\:", ".");
-            var value = Environment.GetEnvironmentVariable(envName);
-            if (!string.IsNullOrEmpty(value)) return value;
             return config.GetSection(name)?.Value ?? defVal;
         }
     }
