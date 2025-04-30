@@ -149,14 +149,14 @@ order by t1.TABLE_NAME, column_id
                 return decimal.Parse(value);
             }
 
-            //if (column.type == "DATE")
-            //{
-            //    if (string.IsNullOrEmpty(value) && column.null_able)
-            //    {
-            //        return (DateTime?)null;
-            //    }
-            //    return DateTime.Parse(value);
-            //}
+            if (column.type == "DATE")
+            {
+                if (string.IsNullOrEmpty(value) && column.null_able)
+                {
+                    return (DateTime?)null;
+                }
+                return DateTime.Parse(value);
+            }
 
             if (column.type == "NUMBER")
             {
@@ -196,6 +196,8 @@ order by t1.TABLE_NAME, column_id
             var allList = ReadCsv(filePath);
             var glist = GroupList(allList, batchSize);
 
+            int rowCount = 0;
+
             foreach (var group in glist)
             {
                 using var trans = await conn.BeginTransactionAsync();
@@ -205,6 +207,7 @@ order by t1.TABLE_NAME, column_id
                     var addList = group.Select(t => GetInsertObj(t, columns)).ToArray();
                     await conn.ExecuteAsync(sql, addList, trans);
                     await trans.CommitAsync();
+                    rowCount += addList.Length;
                 }
                 catch (Exception ex)
                 {
@@ -212,9 +215,13 @@ order by t1.TABLE_NAME, column_id
                     LogService.Error(ex);
                     await trans.RollbackAsync();
                 }
+
+                LogService.Info($"Start Import {tableName} {rowCount}");
             }
 
             await conn.CloseAsync();
+
+            LogService.Info("End Import " + tableName);
         }
     }
 }
