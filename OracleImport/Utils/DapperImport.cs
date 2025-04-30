@@ -198,6 +198,8 @@ order by t1.TABLE_NAME, column_id
 
             int rowCount = 0;
 
+            await conn.ExecuteAsync("TRUNCATE TABLE " + tableName);
+
             foreach (var group in glist)
             {
                 using var trans = await conn.BeginTransactionAsync();
