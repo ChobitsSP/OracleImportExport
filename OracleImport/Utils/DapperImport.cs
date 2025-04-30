@@ -118,7 +118,7 @@ order by t1.TABLE_NAME, column_id
 
                 try
                 {
-                    await conn.ExecuteAsync(sql, group);
+                    await conn.ExecuteAsync(sql, group, trans);
                     await trans.CommitAsync();
                 }
                 catch (Exception ex)
