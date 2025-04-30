@@ -189,41 +189,50 @@ order by t1.TABLE_NAME, column_id
                 await conn.OpenAsync();
             }
 
-            var columns = await GetColumns(conn, tableName);
-
-            var sql = GetInsertSql(columns, tableName);
-
-            var allList = ReadCsv(filePath);
-            var glist = GroupList(allList, batchSize);
-
-            int rowCount = 0;
-
-            await conn.ExecuteAsync("TRUNCATE TABLE " + tableName);
-
-            foreach (var group in glist)
+            try
             {
-                using var trans = await conn.BeginTransactionAsync();
+                var columns = await GetColumns(conn, tableName);
 
-                try
+                var sql = GetInsertSql(columns, tableName);
+
+                var allList = ReadCsv(filePath);
+                var glist = GroupList(allList, batchSize);
+
+                int rowCount = 0;
+
+                await conn.ExecuteAsync("TRUNCATE TABLE " + tableName);
+
+                foreach (var group in glist)
                 {
-                    var addList = group.Select(t => GetInsertObj(t, columns)).ToArray();
-                    await conn.ExecuteAsync(sql, addList, trans);
-                    await trans.CommitAsync();
-                    rowCount += addList.Length;
-                }
-                catch (Exception ex)
-                {
-                    LogService.Warn($"Table {tableName} Import Error: {ex.Message}");
-                    LogService.Error(ex);
-                    await trans.RollbackAsync();
+                    using var trans = await conn.BeginTransactionAsync();
+
+                    try
+                    {
+                        var addList = group.Select(t => GetInsertObj(t, columns)).ToArray();
+                        await conn.ExecuteAsync(sql, addList, trans);
+                        await trans.CommitAsync();
+                        rowCount += addList.Length;
+                    }
+                    catch (Exception ex)
+                    {
+                        LogService.Warn($"Table {tableName} Import Error: {ex.Message}");
+                        LogService.Error(ex);
+                        await trans.RollbackAsync();
+                    }
+
+                    LogService.Info($"Start Import {tableName} {rowCount}");
                 }
 
-                LogService.Info($"Start Import {tableName} {rowCount}");
+                LogService.Info("End Import " + tableName);
             }
-
-            await conn.CloseAsync();
-
-            LogService.Info("End Import " + tableName);
+            catch (Exception ex)
+            {
+                LogService.Error(ex);
+            }
+            finally
+            {
+                await conn.CloseAsync();
+            }
         }
     }
 }
