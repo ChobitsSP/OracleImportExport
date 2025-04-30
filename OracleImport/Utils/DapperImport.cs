@@ -132,23 +132,13 @@ order by t1.TABLE_NAME, column_id
 
         static object GetValueObj(string value, TableColumn column)
         {
-            string[] strlist = [
-                "VARCHAR2",
-                "NVARCHAR2",
-                "CLOB",
-                "NCHAR",
-                "XMLTYPE",
-            ];
-
-            // 字符串类型
-            if (strlist.Contains(column.type))
-            {
-                if (string.IsNullOrEmpty(value) && column.null_able)
-                {
-                    return (string)null;
-                }
-                return value;
-            }
+            //string[] strlist = [
+            //    "VARCHAR2",
+            //    "NVARCHAR2",
+            //    "CLOB",
+            //    "NCHAR",
+            //    "XMLTYPE",
+            //];
 
             if (column.type == "FLOAT")
             {
@@ -159,14 +149,14 @@ order by t1.TABLE_NAME, column_id
                 return decimal.Parse(value);
             }
 
-            if (column.type == "DATE")
-            {
-                if (string.IsNullOrEmpty(value) && column.null_able)
-                {
-                    return (DateTime?)null;
-                }
-                return DateTime.Parse(value);
-            }
+            //if (column.type == "DATE")
+            //{
+            //    if (string.IsNullOrEmpty(value) && column.null_able)
+            //    {
+            //        return (DateTime?)null;
+            //    }
+            //    return DateTime.Parse(value);
+            //}
 
             if (column.type == "NUMBER")
             {
@@ -181,7 +171,12 @@ order by t1.TABLE_NAME, column_id
                 return decimal.Parse(value);
             }
 
-            return null;
+            // 字符串类型
+            if (string.IsNullOrEmpty(value) && column.null_able)
+            {
+                return (string)null;
+            }
+            return value;
         }
 
         public static async Task Import(string filePath, string tableName, int batchSize)
