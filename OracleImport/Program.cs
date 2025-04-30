@@ -12,14 +12,7 @@ namespace OracleImport
 
             while (true)
             {
-                Console.WriteLine("Please input folder:");
-                var folder = Console.ReadLine();
-
-                if (!Directory.Exists(folder))
-                {
-                    Console.WriteLine("Folder not exists, please input again.");
-                    continue;
-                }
+                var folder = GetFolder();
 
                 var batchSize = GetIntFromConsole("Please input batch size (default 1000):", 1000);
 
@@ -49,6 +42,26 @@ namespace OracleImport
 
                     Console.WriteLine($"Import {fileName} completed.");
                 }
+            }
+        }
+
+        static string GetFolder()
+        {
+            var folder = ConfigUtils.GetSectionValue("Import:Folder");
+            if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder)) return folder;
+
+            while (true)
+            {
+                Console.WriteLine("Please input folder:");
+                folder = Console.ReadLine();
+
+                if (!Directory.Exists(folder))
+                {
+                    Console.WriteLine("Folder not exists, please input again.");
+                    continue;
+                }
+
+                return folder;
             }
         }
 
