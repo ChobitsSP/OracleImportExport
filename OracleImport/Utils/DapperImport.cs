@@ -184,6 +184,11 @@ order by t1.TABLE_NAME, column_id
             var constr = ConfigUtils.GetConnectionString();
             using var conn = new OracleConnection(constr);
 
+            if (conn.State != System.Data.ConnectionState.Open)
+            {
+                await conn.OpenAsync();
+            }
+
             var columns = await GetColumns(conn, tableName);
 
             var sql = GetInsertSql(columns, tableName);
@@ -208,6 +213,8 @@ order by t1.TABLE_NAME, column_id
                     await trans.RollbackAsync();
                 }
             }
+
+            await conn.CloseAsync();
         }
     }
 }
