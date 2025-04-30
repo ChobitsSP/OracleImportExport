@@ -16,7 +16,7 @@ namespace OracleImport
 
             var csvFiles = Directory.GetFiles(folder, "*.csv");
 
-            foreach (var csvFile in csvFiles)
+            foreach (var csvFile in csvFiles.OrderBy(t => new FileInfo(t).Length))
             {
                 var fileName = Path.GetFileNameWithoutExtension(csvFile);
 
