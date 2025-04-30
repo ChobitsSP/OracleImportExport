@@ -1,16 +1,14 @@
-﻿using System.Data;
-using Oracle.ManagedDataAccess.Client;
-using CsvHelper;
-using System.Globalization;
-using System.Text;
+﻿using System.Text;
+using OracleImport.Utils;
 
 namespace OracleImport
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            LogService.Init();
 
             while (true)
             {
@@ -40,10 +38,11 @@ namespace OracleImport
 
                     try
                     {
-                        ImportData(csvFile, fileName, batchSize);
+                        await DapperImport.Import(csvFile, fileName, batchSize);
                     }
                     catch (Exception ex)
                     {
+                        LogService.Error(ex);
                         Console.WriteLine($"Error importing {fileName}: {ex.Message}");
                         continue;
                     }
@@ -60,42 +59,6 @@ namespace OracleImport
             if (string.IsNullOrEmpty(input)) return def;
             if (int.TryParse(input, out var result)) return result;
             return def;
-        }
-
-        public static void ImportData(string csvFilePath, string tableName, int batchSize = 1000)
-        {
-            var constr = ConfigUtils.GetConnectionString();
-            using var conn = new OracleConnection(constr);
-
-            conn.Open();
-
-            using var bulkCopy = new OracleBulkCopy(conn)
-            {
-                DestinationTableName = tableName,
-                BatchSize = batchSize,
-            };
-
-            var table = ReadCsv(csvFilePath);
-            bulkCopy.WriteToServer(table);
-
-            conn.Close();
-        }
-
-        public static DataTable ReadCsv(string filePath)
-        {
-            var dt = new DataTable();
-
-            using (var reader = new StreamReader(filePath, encoding: Encoding.GetEncoding("GBK")))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-            {
-                // Do any configuration to `CsvReader` before creating CsvDataReader.
-                using (var dr = new CsvDataReader(csv))
-                {
-                    dt.Load(dr);
-                }
-            }
-
-            return dt;
         }
     }
 }
