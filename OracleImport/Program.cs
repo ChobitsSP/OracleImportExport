@@ -23,7 +23,7 @@ namespace OracleImport
                     continue;
                 }
 
-                var batchSize = ("Please input batch size (default 1000):", 1000);
+                var batchSize = GetIntFromConsole("Please input batch size (default 1000):", 1000);
 
                 var csvFiles = Directory.GetFiles(folder, "*.csv");
 
