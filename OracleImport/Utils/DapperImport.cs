@@ -125,6 +125,7 @@ order by t1.TABLE_NAME, column_id
                 {
                     LogService.Warn($"Table {tableName} Import Error: {ex.Message}");
                     LogService.Error(ex);
+                    await trans.RollbackAsync();
                 }
             }
         }
