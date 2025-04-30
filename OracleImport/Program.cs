@@ -29,7 +29,7 @@ namespace OracleImport
 
                 foreach (var csvFile in csvFiles)
                 {
-                    var fileName = Path.GetFileName(csvFile);
+                    var fileName = Path.GetFileNameWithoutExtension(csvFile);
 
                     if (fileName.EndsWith("_DATA_TABLE"))
                     {
