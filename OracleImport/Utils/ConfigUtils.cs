@@ -36,6 +36,13 @@ namespace OracleImport
             return GetConfig().GetSectionValue(name, defVal);
         }
 
+        public static int? GetInt(string name)
+        {
+            var str = GetSectionValue(name);
+            if (string.IsNullOrEmpty(str)) return null;
+            return int.TryParse(str, out var result) ? result : null;
+        }
+
         public static string GetSectionValue(this IConfiguration config, string name, string defVal = null)
         {
             return config.GetSection(name)?.Value ?? defVal;
