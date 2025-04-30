@@ -10,39 +10,39 @@ namespace OracleImport
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             LogService.Init();
 
-            while (true)
+            var folder = GetFolder();
+
+            // var batchSize = GetIntFromConsole("Please input batch size (default 1000):", 1000);
+            var batchSize = 10000;
+
+            var csvFiles = Directory.GetFiles(folder, "*.csv");
+
+            foreach (var csvFile in csvFiles)
             {
-                var folder = GetFolder();
+                var fileName = Path.GetFileNameWithoutExtension(csvFile);
 
-                var batchSize = GetIntFromConsole("Please input batch size (default 1000):", 1000);
-
-                var csvFiles = Directory.GetFiles(folder, "*.csv");
-
-                foreach (var csvFile in csvFiles)
+                if (fileName.EndsWith("_DATA_TABLE"))
                 {
-                    var fileName = Path.GetFileNameWithoutExtension(csvFile);
-
-                    if (fileName.EndsWith("_DATA_TABLE"))
-                    {
-                        fileName = fileName.Replace("_DATA_TABLE", string.Empty);
-                    }
-
-                    Console.WriteLine($"Importing {fileName}...");
-
-                    try
-                    {
-                        await DapperImport.Import(csvFile, fileName, batchSize);
-                    }
-                    catch (Exception ex)
-                    {
-                        LogService.Error(ex);
-                        Console.WriteLine($"Error importing {fileName}: {ex.Message}");
-                        continue;
-                    }
-
-                    Console.WriteLine($"Import {fileName} completed.");
+                    fileName = fileName.Replace("_DATA_TABLE", string.Empty);
                 }
+
+                Console.WriteLine($"Importing {fileName}...");
+
+                try
+                {
+                    await DapperImport.Import(csvFile, fileName, batchSize);
+                }
+                catch (Exception ex)
+                {
+                    LogService.Error(ex);
+                    Console.WriteLine($"Error importing {fileName}: {ex.Message}");
+                    continue;
+                }
+
+                Console.WriteLine($"Import {fileName} completed.");
             }
+
+            Console.ReadLine();
         }
 
         static string GetFolder()
