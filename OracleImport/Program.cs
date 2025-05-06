@@ -41,6 +41,7 @@ namespace OracleImport
                 Console.WriteLine($"Import {fileName} completed.");
             }
 
+            Console.WriteLine($"Import completed.");
             Console.ReadLine();
         }
 
