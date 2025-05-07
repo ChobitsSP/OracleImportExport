@@ -14,7 +14,7 @@ namespace OracleImport
 
             var batchSize = ConfigUtils.GetInt("Import:BatchSize") ?? 10000;
 
-            var csvFiles = Directory.GetFiles(folder, "*.csv");
+            var csvFiles = Directory.GetFiles(folder, "*.csv", SearchOption.TopDirectoryOnly);
 
             foreach (var csvFile in csvFiles.OrderBy(t => new FileInfo(t).Length))
             {
