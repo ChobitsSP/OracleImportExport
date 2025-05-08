@@ -10,23 +10,13 @@ namespace OracleBackup
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             LogService.Init();
 
-            while (true)
+            try
             {
-                Console.WriteLine("Please input table:");
-                var tableName = Console.ReadLine();
-
-                if (string.IsNullOrEmpty(tableName)) continue;
-
-                try
-                {
-                    await DapperExport.TableToCsv(tableName);
-                    Console.WriteLine($"Export {tableName} completed.");
-                }
-                catch (Exception ex)
-                {
-                    LogService.Error(ex);
-                    Console.WriteLine($"Error exporting {tableName}: {ex.Message}");
-                }
+                await DapperExport.BackupToCsv();
+            }
+            catch (Exception ex)
+            {
+                LogService.Error(ex);
             }
         }
     }

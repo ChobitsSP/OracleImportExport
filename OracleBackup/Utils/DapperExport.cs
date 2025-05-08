@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Oracle.ManagedDataAccess.Client;
-using System.Formats.Asn1;
 
 namespace OracleBackup.Utils
 {
@@ -20,12 +19,37 @@ namespace OracleBackup.Utils
             return string.IsNullOrEmpty(value) ? Encoding.UTF8 : Encoding.GetEncoding(value);
         }
 
-        public static Task TableToCsv(string tableName)
+        public static async Task BackupToCsv()
         {
             var constr = ConfigUtils.GetConnectionString();
             using var conn = new OracleConnection(constr);
             var folder = ConfigUtils.GetSectionValue("Backup:Folder");
-            return TableToCsv(conn, tableName, folder);
+
+            var dir = Path.Combine(folder, DateTime.Now.ToString("yyMMddHHmmss"));
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            var tableNames = await GetTableNames(conn);
+
+            foreach (var tableName in tableNames)
+            {
+                LogService.Info($"Exporting {tableName} Start");
+                await TableToCsv(conn, tableName, dir);
+                LogService.Info($"Exporting {tableName} End");
+            }
+
+            //::todo 压缩文件
+
+            // Directory.Delete(dir, true);
+        }
+
+        public static async Task<IEnumerable<string>> GetTableNames(IDbConnection conn)
+        {
+            const string sql = "SELECT table_name FROM user_tables order by table_name";
+            var list = await conn.QueryAsync<string>(sql);
+            return list;
         }
 
         public static async Task TableToCsv(IDbConnection conn, string tableName, string dir)
