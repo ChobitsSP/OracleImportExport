@@ -8,6 +8,12 @@ namespace OracleImport.Utils
 {
     public static class DapperImport
     {
+        public static Encoding GetEncoding()
+        {
+            var value = ConfigUtils.GetSectionValue("Import:Encoding");
+            return string.IsNullOrEmpty(value) ? Encoding.UTF8 : Encoding.GetEncoding(value);
+        }
+
         public static string GetInsertSql(List<TableColumn> columns, string table_name)
         {
             // var columnNames = string.Join(",", columns.Select(t => $@"""{t.name}"""));
@@ -96,7 +102,7 @@ order by t1.TABLE_NAME, column_id
 
         public static IEnumerable<Dictionary<string, string>> ReadCsv(string filePath)
         {
-            using var reader = new StreamReader(filePath, encoding: Encoding.GetEncoding("GBK"));
+            using var reader = new StreamReader(filePath, encoding: GetEncoding());
             using var csvReader = new CsvReader(reader, CultureInfo.InvariantCulture);
 
             csvReader.Read();
