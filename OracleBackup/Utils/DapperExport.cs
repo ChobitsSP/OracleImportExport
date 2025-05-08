@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Oracle.ManagedDataAccess.Client;
+using System.IO.Compression;
 
 namespace OracleBackup.Utils
 {
@@ -25,10 +26,12 @@ namespace OracleBackup.Utils
             using var conn = new OracleConnection(constr);
             var folder = ConfigUtils.GetSectionValue("Backup:Folder");
 
-            var dir = Path.Combine(folder, DateTime.Now.ToString("yyMMddHHmmss"));
-            if (!Directory.Exists(dir))
+            var saveName = $"{conn.Database}_{DateTime.Now.ToString("yyMMddHHmmss")}";
+
+            var dirPath = Path.Combine(folder, saveName);
+            if (!Directory.Exists(dirPath))
             {
-                Directory.CreateDirectory(dir);
+                Directory.CreateDirectory(dirPath);
             }
 
             var tableNames = await GetTableNames(conn);
@@ -36,13 +39,13 @@ namespace OracleBackup.Utils
             foreach (var tableName in tableNames)
             {
                 LogService.Info($"Exporting {tableName} Start");
-                await TableToCsv(conn, tableName, dir);
+                await TableToCsv(conn, tableName, dirPath);
                 LogService.Info($"Exporting {tableName} End");
             }
 
-            //::todo 压缩文件
-
-            // Directory.Delete(dir, true);
+            string zipPath = Path.Combine(folder, saveName + ".zip");
+            ZipFile.CreateFromDirectory(dirPath, zipPath);
+            Directory.Delete(dirPath, true);
         }
 
         public static async Task<IEnumerable<string>> GetTableNames(IDbConnection conn)
