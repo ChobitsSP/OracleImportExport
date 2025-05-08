@@ -1,10 +1,17 @@
-﻿namespace OracleBackup
+﻿using OracleBackup.Utils;
+
+namespace OracleBackup
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            Console.WriteLine("Hello, World!");
+            while (true)
+            {
+                Console.WriteLine("Please input table:");
+                var tableName = Console.ReadLine();
+                await DapperExport.TableToCsv(tableName);
+            }
         }
     }
 }
