@@ -14,11 +14,18 @@ namespace OracleBackup.Utils
 {
     public static class DapperExport
     {
+        public static Encoding GetEncoding()
+        {
+            var value = ConfigUtils.GetSectionValue("Backup:Encoding");
+            return string.IsNullOrEmpty(value) ? Encoding.UTF8 : Encoding.GetEncoding(value);
+        }
+
         public static Task TableToCsv(string tableName)
         {
             var constr = ConfigUtils.GetConnectionString();
             using var conn = new OracleConnection(constr);
-            return TableToCsv(conn, tableName, string.Empty);
+            var folder = ConfigUtils.GetSectionValue("Backup:Folder");
+            return TableToCsv(conn, tableName, folder);
         }
 
         public static async Task TableToCsv(IDbConnection conn, string tableName, string dir)
@@ -64,7 +71,7 @@ namespace OracleBackup.Utils
 
             var csv = new CsvWriter(writer, new CsvConfiguration(new System.Globalization.CultureInfo("zh-CN"))
             {
-                Encoding = Encoding.GetEncoding("GBK"),
+                Encoding = GetEncoding(),
             });
 
             foreach (var columnName in GetColumns(reader))
