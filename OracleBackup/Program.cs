@@ -14,7 +14,19 @@ namespace OracleBackup
             {
                 Console.WriteLine("Please input table:");
                 var tableName = Console.ReadLine();
-                await DapperExport.TableToCsv(tableName);
+
+                if (string.IsNullOrEmpty(tableName)) continue;
+
+                try
+                {
+                    await DapperExport.TableToCsv(tableName);
+                    Console.WriteLine($"Export {tableName} completed.");
+                }
+                catch (Exception ex)
+                {
+                    LogService.Error(ex);
+                    Console.WriteLine($"Error exporting {tableName}: {ex.Message}");
+                }
             }
         }
     }

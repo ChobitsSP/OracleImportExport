@@ -28,6 +28,23 @@ namespace OracleBackup.Utils
             await WriteToCsv(reader, filePath);
         }
 
+        static IEnumerable<string> GetColumns(IDataReader reader)
+        {
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                yield return reader.GetName(i);
+            }
+        }
+
+        static IEnumerable<string> GetCells(IDataReader reader)
+        {
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                var value = reader.GetValue(i);
+                yield return value == null ? null : value.ToString();
+            }
+        }
+
         static async Task WriteToCsv(IDataReader reader, string filePath)
         {
             using var writer = new StreamWriter(filePath);
@@ -37,18 +54,11 @@ namespace OracleBackup.Utils
                 Encoding = Encoding.GetEncoding("GBK"),
             });
 
-            await csv.WriteRecordsAsync(Enumerable.Range(0, reader.FieldCount).Select(reader.GetName));
+            await csv.WriteRecordsAsync(GetColumns(reader).ToArray());
 
             while (reader.Read())
             {
-                var cells = Enumerable.Range(0, reader.FieldCount)
-                    .Select(reader.GetValue)
-                    .Select(t =>
-                    {
-                        if (t == null) return null;
-                        return t.ToString();
-                    });
-
+                var cells = GetCells(reader).ToArray();
                 await csv.WriteRecordsAsync(cells);
             }
 
