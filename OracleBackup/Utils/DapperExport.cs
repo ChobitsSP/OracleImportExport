@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Oracle.ManagedDataAccess.Client;
+using System.Formats.Asn1;
 
 namespace OracleBackup.Utils
 {
@@ -41,7 +42,19 @@ namespace OracleBackup.Utils
             for (var i = 0; i < reader.FieldCount; i++)
             {
                 var value = reader.GetValue(i);
-                yield return value == null ? null : value.ToString();
+
+                if (value == null)
+                {
+                    yield return null;
+                }
+                else if (value.GetType() == typeof(DateTime))
+                {
+                    yield return ((DateTime)value).ToString("yyyy-MM-dd HH:mm:ss");
+                }
+                else
+                {
+                    yield return value.ToString();
+                }
             }
         }
 
@@ -54,12 +67,20 @@ namespace OracleBackup.Utils
                 Encoding = Encoding.GetEncoding("GBK"),
             });
 
-            await csv.WriteRecordsAsync(GetColumns(reader).ToArray());
+            foreach (var columnName in GetColumns(reader))
+            {
+                csv.WriteField(columnName);
+            }
+
+            await csv.NextRecordAsync();
 
             while (reader.Read())
             {
-                var cells = GetCells(reader).ToArray();
-                await csv.WriteRecordsAsync(cells);
+                foreach (var v in GetCells(reader))
+                {
+                    csv.WriteField(v);
+                }
+                await csv.NextRecordAsync();
             }
 
             writer.Close();
