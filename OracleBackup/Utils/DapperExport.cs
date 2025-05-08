@@ -25,8 +25,7 @@ namespace OracleBackup.Utils
             var constr = ConfigUtils.GetConnectionString();
             using var conn = new OracleConnection(constr);
             var folder = ConfigUtils.GetSectionValue("Backup:Folder");
-
-            var saveName = $"{conn.Database}_{DateTime.Now.ToString("yyMMddHHmmss")}";
+            var saveName = ConfigUtils.GetSectionValue("Backup:FileName") + $"_{DateTime.Now.ToString("yyMMddHHmmss")}";
 
             var dirPath = Path.Combine(folder, saveName);
             if (!Directory.Exists(dirPath))
