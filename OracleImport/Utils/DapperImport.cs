@@ -1,6 +1,7 @@
 ﻿using CsvHelper;
 using Dapper;
 using Oracle.ManagedDataAccess.Client;
+using System.Data;
 using System.Globalization;
 using System.Text;
 
@@ -239,6 +240,85 @@ order by t1.TABLE_NAME, column_id
             finally
             {
                 await conn.CloseAsync();
+            }
+        }
+
+        public static async Task SeqFix(IEnumerable<string> tableNames)
+        {
+            var constr = ConfigUtils.GetConnectionString();
+            using var conn = new OracleConnection(constr);
+
+            if (conn.State != System.Data.ConnectionState.Open)
+            {
+                await conn.OpenAsync();
+            }
+
+            var sb = new StringBuilder();
+
+            foreach (var name in tableNames)
+            {
+                try
+                {
+                    await SeqFix(conn, name, sb);
+                }
+                catch (Exception ex)
+                {
+                    LogService.Warn($"修复{name}报错: {ex.Message}");
+                    LogService.Error(ex);
+                }
+            }
+
+            await conn.CloseAsync();
+
+            File.WriteAllText("fix_seq.sql", sb.ToString(), Encoding.UTF8);
+        }
+
+        public static async Task SeqFix(OracleConnection conn, string tableName, StringBuilder sb)
+        {
+            var columns = await GetColumns(conn, tableName);
+
+            var keyColumn = columns.First();
+            if (!keyColumn.name.StartsWith("SEQ_")) return;
+
+            var maxId = (await conn.QueryFirstOrDefaultAsync<long?>($"select max({keyColumn.name}) from {tableName}")) ?? 0;
+
+            var seq_name = "SEQ_" + tableName;
+            var currentId = await conn.QueryFirstOrDefaultAsync<long?>($"SELECT LAST_NUMBER FROM user_sequences WHERE sequence_name = '{seq_name}'");
+
+            if (currentId == null)
+            {
+                LogService.Warn($"序列不存在: {seq_name}");
+                return;
+            }
+
+            if (currentId >= maxId) return;
+
+            var add_value = maxId - currentId + 1;
+
+            //using var trans = await conn.BeginTransactionAsync();
+
+            // http://www.gokhanatil.com/2011/01/how-to-set-current-value-of-a-sequence-without-droppingrecreating.html
+
+            try
+            {
+                //await conn.ExecuteAsync($"ALTER SEQUENCE {seq_name} INCREMENT BY {add_value}", transaction: trans);
+                //await conn.ExecuteAsync($"SELECT {seq_name}.NEXTVAL FROM dual");
+                //await conn.ExecuteAsync($"ALTER SEQUENCE {seq_name} INCREMENT BY 1");
+                //await trans.CommitAsync();
+                LogService.Info($"已修复序列: {tableName}, 修复前: {currentId}, 修复后: {maxId}");
+
+                //http://www.gokhanatil.com/2011/01/how-to-set-current-value-of-a-sequence-without-droppingrecreating.html
+                sb.AppendFormat("ALTER SEQUENCE {0} INCREMENT BY {1};", seq_name, add_value);
+                sb.AppendLine();
+                sb.AppendFormat("SELECT {0}.NEXTVAL FROM dual;", seq_name);
+                sb.AppendLine();
+                sb.AppendFormat("ALTER SEQUENCE {0} INCREMENT BY 1;", seq_name);
+                sb.AppendLine();
+            }
+            catch (Exception ex)
+            {
+                LogService.Error(ex);
+                //await trans.RollbackAsync();
             }
         }
     }
