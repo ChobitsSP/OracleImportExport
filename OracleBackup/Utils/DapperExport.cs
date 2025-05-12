@@ -37,6 +37,8 @@ namespace OracleBackup.Utils
 
             foreach (var tableName in tableNames)
             {
+                var hasData = await HasData(conn, tableName);
+                if (!hasData) continue;
                 LogService.Info($"Exporting {tableName} Start");
                 await TableToCsv(conn, tableName, dirPath);
                 LogService.Info($"Exporting {tableName} End");
@@ -89,6 +91,13 @@ namespace OracleBackup.Utils
                     yield return value.ToString();
                 }
             }
+        }
+
+        static async Task<bool> HasData(IDbConnection conn, string tableName)
+        {
+            var sql = $"SELECT 1 FROM {tableName} WHERE ROWNUM = 1";
+            var result = await conn.QueryFirstOrDefaultAsync<int?>(sql);
+            return result == 1;
         }
 
         static async Task WriteToCsv(IDataReader reader, string filePath)
