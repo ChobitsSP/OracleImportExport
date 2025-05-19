@@ -135,5 +135,29 @@ namespace OracleBackup.Utils
 
             writer.Close();
         }
+
+        static void CheckCellValue(IDataReader reader, string tableName, Func<string, bool> isMatch)
+        {
+            var columns = GetColumns(reader).ToArray();
+
+            var set = new HashSet<string>();
+
+            while (reader.Read())
+            {
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    var key = string.Join(":", tableName, columns[i]);
+                    if (set.Contains(key)) continue;
+
+                    var value = reader.GetValue(i);
+
+                    if (value != null && value.GetType() == typeof(string) && isMatch((string)value))
+                    {
+                        set.Add(key);
+                        LogService.Info(key);
+                    }
+                }
+            }
+        }
     }
 }
