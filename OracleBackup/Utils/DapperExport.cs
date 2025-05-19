@@ -95,9 +95,17 @@ namespace OracleBackup.Utils
 
         static async Task<bool> HasData(IDbConnection conn, string tableName)
         {
-            var sql = $"SELECT 1 FROM {tableName} WHERE ROWNUM = 1";
-            var result = await conn.QueryFirstOrDefaultAsync<int?>(sql);
-            return result == 1;
+            try
+            {
+                var sql = $"SELECT 1 FROM {tableName} WHERE ROWNUM = 1";
+                var result = await conn.QueryFirstOrDefaultAsync<int?>(sql);
+                return result == 1;
+            }
+            catch (Exception ex)
+            {
+                LogService.Warn($"Error checking data for table {tableName}: {ex.Message}");
+                return false;
+            }
         }
 
         static async Task WriteToCsv(IDataReader reader, string filePath)
