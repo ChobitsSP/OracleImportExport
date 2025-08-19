@@ -20,7 +20,7 @@ namespace OracleBackup.Utils
             return string.IsNullOrEmpty(value) ? Encoding.UTF8 : Encoding.GetEncoding(value);
         }
 
-        public static async Task BackupToCsv()
+        public static async Task BackupToCsv(bool isZip = true)
         {
             var constr = ConfigUtils.GetConnectionString();
             using var conn = new OracleConnection(constr);
@@ -44,9 +44,12 @@ namespace OracleBackup.Utils
                 LogService.Info($"Exporting {tableName} End");
             }
 
-            string zipPath = Path.Combine(folder, saveName + ".zip");
-            ZipFile.CreateFromDirectory(dirPath, zipPath);
-            Directory.Delete(dirPath, true);
+            if (isZip)
+            {
+                string zipPath = Path.Combine(folder, saveName + ".zip");
+                ZipFile.CreateFromDirectory(dirPath, zipPath);
+                Directory.Delete(dirPath, true);
+            }
         }
 
         public static async Task<IEnumerable<string>> GetTableNames(IDbConnection conn)
@@ -85,6 +88,10 @@ namespace OracleBackup.Utils
                 else if (value.GetType() == typeof(DateTime))
                 {
                     yield return ((DateTime)value).ToString("yyyy-MM-dd HH:mm:ss");
+                }
+                else if (value.GetType() == typeof(byte[]))
+                {
+                    yield return Convert.ToBase64String((byte[])value);
                 }
                 else
                 {
