@@ -147,7 +147,7 @@ order by t1.TABLE_NAME, column_id
             //    "XMLTYPE",
             //];
 
-            if (column.type == "BLOB")
+            if (new string[] { "RAW", "BLOB" }.Contains(column.type))
             {
                 if (string.IsNullOrEmpty(value) && column.null_able)
                 {
