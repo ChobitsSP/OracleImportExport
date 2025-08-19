@@ -147,6 +147,14 @@ order by t1.TABLE_NAME, column_id
             //    "XMLTYPE",
             //];
 
+            if (column.type == "BLOB")
+            {
+                if (string.IsNullOrEmpty(value) && column.null_able)
+                {
+                    return (byte[])[];
+                }
+                return Convert.FromBase64String(value);
+            }
             if (column.type == "FLOAT")
             {
                 if (string.IsNullOrEmpty(value) && column.null_able)
